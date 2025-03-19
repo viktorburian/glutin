@@ -33,6 +33,7 @@ pub(crate) static EGL: Lazy<Option<Egl>> = Lazy::new(|| {
     let paths = ["libEGL.dll", "atioglxx.dll"];
 
     #[cfg(not(windows))]
+    println!("GLUTIN: libEGL paths");
     let paths = ["/overlay/glib/libEGL.so.1", "/overlay/glib/libEGL.so"];
 
     unsafe { SymWrapper::new(&paths).map(Egl).ok() }
@@ -98,6 +99,7 @@ fn check_error() -> Result<()> {
     let egl = EGL.as_ref().unwrap();
     unsafe {
         let raw_code = egl.GetError() as egl::types::EGLenum;
+        println!("GLUTIN: check_error: {:#?}", raw_code);
         let kind = match raw_code {
             egl::SUCCESS => return Ok(()),
             egl::NOT_INITIALIZED => ErrorKind::InitializationFailed,

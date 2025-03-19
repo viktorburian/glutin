@@ -52,31 +52,41 @@ impl Display {
     /// `EGL_DEFAULT_DISPLAY`, which is not recommended or will
     /// work on a platform with a concept of native display, like Wayland.
     pub unsafe fn new(raw_display: RawDisplayHandle) -> Result<Self> {
+        println!("GLUTIN: EglDisplay::new");
         let egl = match EGL.as_ref() {
             Some(egl) => egl,
-            None => return Err(ErrorKind::NotFound.into()),
+            None => {
+                println!("GLUTIN: No EGL");
+                return Err(ErrorKind::NotFound.into())
+            }
         };
 
         CLIENT_EXTENSIONS.get_or_init(|| get_extensions(egl, egl::NO_DISPLAY));
+        println!("CLIENT_EXTENSIONS: {:#?}", CLIENT_EXTENSIONS);
 
         // Create a EGL display by chaining all display creation functions aborting on
         // `EGL_BAD_ATTRIBUTE`.
         let display = Self::get_platform_display(egl, raw_display)
             .or_else(|err| {
                 if err.error_kind() == ErrorKind::BadAttribute {
+                    println!("GLUTIN: {}, {}", file!(), line!());
                     Err(err)
                 } else {
+                    println!("GLUTIN: {}, {}", file!(), line!());
                     Self::get_platform_display_ext(egl, raw_display)
                 }
             })
             .or_else(|err| {
                 if err.error_kind() == ErrorKind::BadAttribute {
+                    println!("GLUTIN: {}, {}", file!(), line!());
                     Err(err)
                 } else {
+                    println!("GLUTIN: {}, {}", file!(), line!());
                     Self::get_display(egl, raw_display)
                 }
             })?;
 
+        println!("GLUTIN: {}, {}", file!(), line!());
         Self::initialize_display(egl, display, Some(raw_display))
     }
 
@@ -318,6 +328,8 @@ impl Display {
 
         let extensions = CLIENT_EXTENSIONS.get().unwrap();
 
+        println!("GLUTIN: RawDisplayHandle: {:#?}", display);
+
         let mut attrs = Vec::<EGLint>::with_capacity(5);
         let mut legacy = false;
         let (platform, display) = match display {
@@ -325,10 +337,12 @@ impl Display {
             RawDisplayHandle::Wayland(handle)
                 if extensions.contains("EGL_EXT_platform_wayland") =>
             {
+                println!("GLUTIN: {}, {}", file!(), line!());
                 (egl::PLATFORM_WAYLAND_EXT, handle.display.as_ptr())
             },
             #[cfg(x11_platform)]
             RawDisplayHandle::Xlib(handle) if extensions.contains("EGL_EXT_platform_x11") => {
+                println!("GLUTIN: {}, {}", file!(), line!());
                 attrs.push(egl::PLATFORM_X11_SCREEN_EXT as EGLint);
                 attrs.push(handle.screen as EGLint);
                 (
@@ -341,6 +355,7 @@ impl Display {
                 if extensions.contains("EGL_MESA_platform_xcb")
                     || extensions.contains("EGL_EXT_platform_xcb") =>
             {
+                println!("GLUTIN: {}, {}", file!(), line!());
                 attrs.push(egl::PLATFORM_XCB_SCREEN_EXT as EGLint);
                 attrs.push(handle.screen as EGLint);
                 (
@@ -349,14 +364,17 @@ impl Display {
                 )
             },
             RawDisplayHandle::Gbm(handle) if extensions.contains("EGL_MESA_platform_gbm") => {
+                println!("GLUTIN: {}, {}", file!(), line!());
                 (egl::PLATFORM_GBM_MESA, handle.gbm_device.as_ptr())
             },
             RawDisplayHandle::Windows(..) if extensions.contains("EGL_ANGLE_platform_angle") => {
+                println!("GLUTIN: {}, {}", file!(), line!());
                 // Only CreateWindowSurface appears to work with Angle.
                 legacy = true;
                 (egl::PLATFORM_ANGLE_ANGLE, egl::DEFAULT_DISPLAY as *mut _)
             },
             _ => {
+                println!("GLUTIN: {}, {}", file!(), line!());
                 return Err(
                     ErrorKind::NotSupported("provided display handle is not supported").into()
                 )
@@ -411,19 +429,25 @@ impl Display {
 
     fn get_display(egl: &Egl, display: RawDisplayHandle) -> Result<EglDisplay> {
         let display = match display {
-            RawDisplayHandle::Gbm(handle) => handle.gbm_device.as_ptr(),
+            RawDisplayHandle::Gbm(handle) => {
+                println!("GLUTIN: {}, {}", file!(), line!());
+                handle.gbm_device.as_ptr()
+            }
             #[cfg(x11_platform)]
             RawDisplayHandle::Xlib(XlibDisplayHandle { display, .. }) => {
+                println!("GLUTIN: {}, {}", file!(), line!());
                 display.map_or(egl::DEFAULT_DISPLAY as *mut _, |d| d.as_ptr())
             },
             RawDisplayHandle::Android(_) => egl::DEFAULT_DISPLAY as *mut _,
             _ => {
+                println!("GLUTIN: {}, {}", file!(), line!());
                 return Err(
                     ErrorKind::NotSupported("provided display handle is not supported").into()
                 )
             },
         };
 
+        println!("GLUTIN: {}, {}", file!(), line!());
         let display = unsafe { egl.GetDisplay(display) };
         Self::check_display_error(display).map(EglDisplay::Legacy)
     }
@@ -461,12 +485,14 @@ impl Display {
 
     fn check_display_error(display: EGLDisplay) -> Result<EGLDisplay> {
         if display == egl::NO_DISPLAY {
+            println!("GLUTIN: {}, {}", file!(), line!());
             // XXX the specification is a bit vague here, so fallback instead of hard
             // assert.
             Err(super::check_error().err().unwrap_or_else(|| {
                 ErrorKind::NotSupported("failed to create EGLDisplay without a reason").into()
             }))
         } else {
+            println!("GLUTIN: {}, {}", file!(), line!());
             Ok(display)
         }
     }
@@ -741,6 +767,8 @@ pub(crate) fn get_extensions(egl: &Egl, display: EGLDisplay) -> HashSet<&'static
         // > eglQueryString returns a pointer to a static, zero-terminated
         // > string describing properties of the EGL client or of an EGL
         // > display connection.
+        println!("GLUTIN: {}, {}", file!(), line!());
+        println!("GLUTIN: QueryString: {:#?}", extensions);
         extensions_from_ptr(extensions)
     }
 }
@@ -750,14 +778,18 @@ pub(crate) fn get_extensions(egl: &Egl, display: EGLDisplay) -> HashSet<&'static
 /// - The `extensions` pointer must be NULL (representing no extensions) or it
 ///   must be non-null and contain a static, null terminated C string.
 pub(crate) unsafe fn extensions_from_ptr(extensions: *const c_char) -> HashSet<&'static str> {
+    println!("GLUTIN: {}, {}", file!(), line!());
     if extensions.is_null() {
         return HashSet::new();
     }
 
+    println!("GLUTIN: {}, {}", file!(), line!());
     // SAFETY: The caller has ensured the string pointer is null terminated.
     if let Ok(extensions) = unsafe { CStr::from_ptr(extensions) }.to_str() {
+        println!("GLUTIN: {}, {}", file!(), line!());
         extensions.split(' ').collect::<HashSet<&'static str>>()
     } else {
+        println!("GLUTIN: {}, {}", file!(), line!());
         HashSet::new()
     }
 }

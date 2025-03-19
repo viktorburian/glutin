@@ -28,6 +28,7 @@ impl Device {
     /// `EGL_EXT_device_enumeration` or `EGL_EXT_device_base` extensions are
     /// not available.
     pub fn query_devices() -> Result<impl Iterator<Item = Device>> {
+        println!("GLUTIN: {}, {}", file!(), line!());
         let egl = match EGL.as_ref() {
             Some(egl) => egl,
             None => return Err(ErrorKind::NotFound.into()),
@@ -45,6 +46,7 @@ impl Device {
             && !no_display_extensions.contains("EGL_EXT_device_query"))
             || !no_display_extensions.contains("EGL_EXT_device_base")
         {
+            println!("GLUTIN: {}, {}", file!(), line!());
             return Err(ErrorKind::NotSupported("EGL does not support EGL_EXT_device_base").into());
         }
 

@@ -30,11 +30,23 @@ impl<T: SymLoading> SymWrapper<T> {
                     .map(From::from);
 
                 #[cfg(not(windows))]
+                println!("DEBUG: SymWrapper::new: Library::new: path: {:#?}", path);
                 let lib = Library::new(path);
 
-                if let Ok(lib) = lib {
-                    return Ok(SymWrapper { sym: T::load_with(&lib), _lib: Arc::new(lib) });
+                match lib {
+                    Ok(lib) => {
+                        println!("DEBUG: SymWrapper::new: Ok(lib)");
+                        return Ok(SymWrapper { sym: T::load_with(&lib), _lib: Arc::new(lib) });
+                    }
+                    Err(e) => {
+                        println!("GLUTIN: Library::new error: {:#?}", e);
+                    }
                 }
+
+                // if let Ok(lib) = lib {
+                //     println!("DEBUG: SymWrapper::new: Ok(lib)");
+                //     return Ok(SymWrapper { sym: T::load_with(&lib), _lib: Arc::new(lib) });
+                // }
             }
         }
 

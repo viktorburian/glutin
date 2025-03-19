@@ -210,7 +210,15 @@ impl Display {
     pub unsafe fn new(display: RawDisplayHandle, preference: DisplayApiPreference) -> Result<Self> {
         match preference {
             #[cfg(egl_backend)]
-            DisplayApiPreference::Egl => unsafe { Ok(Self::Egl(EglDisplay::new(display)?)) },
+            DisplayApiPreference::Egl => unsafe {
+                println!("GLUTIN: egl_backend preference");
+                let egl_display = EglDisplay::new(display);
+                if let Err(e) = egl_display {
+                    println!("GLUTIN: Display::new: {:#?}", e);
+                    return Err(e)
+                }
+                Ok(Self::Egl(egl_display.unwrap()))
+            },
             #[cfg(glx_backend)]
             DisplayApiPreference::Glx(registrar) => unsafe {
                 Ok(Self::Glx(GlxDisplay::new(display, registrar)?))
