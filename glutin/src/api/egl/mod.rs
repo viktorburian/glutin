@@ -33,7 +33,7 @@ pub(crate) static EGL: Lazy<Option<Egl>> = Lazy::new(|| {
     let paths = ["libEGL.dll", "atioglxx.dll"];
 
     #[cfg(not(windows))]
-    let paths = ["libEGL.so.1", "libEGL.so"];
+    let paths = ["/overlay/glib/libEGL.so.1", "/overlay/glib/libEGL.so"];
 
     unsafe { SymWrapper::new(&paths).map(Egl).ok() }
 });
